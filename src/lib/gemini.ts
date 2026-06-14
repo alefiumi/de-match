@@ -122,7 +122,7 @@ function parseGeminiResponse(raw: string): MatchResult {
   // Strategy 3: first complete {...} block
   if (!parsed) {
     try {
-      const match = raw.match(/\{[\s\S]*?\}/s);
+      const match = raw.match(/\{[\s\S]*?\}/);
       if (match) parsed = JSON.parse(match[0]) as MatchResult;
     } catch (_) {
       // continue
