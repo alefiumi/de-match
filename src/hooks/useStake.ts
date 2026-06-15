@@ -54,7 +54,7 @@ export function useStake(): UseStakeReturn {
   const { writeContractAsync } = useWriteContract();
 
   // ── Read: mUSDC balance ──────────────────────────────────────────────────
-  const { data: usdcBalance = 0n, refetch: refetchBalance } = useReadContract({
+  const { data: usdcBalance = BigInt(0), refetch: refetchBalance } = useReadContract({
     address: CONTRACT_ADDRESSES.MOCK_USDC,
     abi: MOCK_USDC_ABI,
     functionName: "balanceOf",
@@ -63,7 +63,7 @@ export function useStake(): UseStakeReturn {
   });
 
   // ── Read: current allowance ──────────────────────────────────────────────
-  const { data: currentAllowance = 0n, refetch: refetchAllowance } = useReadContract({
+  const { data: currentAllowance = BigInt(0), refetch: refetchAllowance } = useReadContract({
     address: CONTRACT_ADDRESSES.MOCK_USDC,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
@@ -113,8 +113,8 @@ export function useStake(): UseStakeReturn {
         refetchBalance(),
         refetchAllowance(),
       ]);
-      const balance   = (balResult.data   as bigint) ?? 0n;
-      const allowance = (allowResult.data as bigint) ?? 0n;
+      const balance   = (balResult.data   as bigint) ?? BigInt(0);
+      const allowance = (allowResult.data as bigint) ?? BigInt(0);
 
       if (balance < STAKE_AMOUNT) {
         setStatus("needs_faucet");

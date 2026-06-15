@@ -203,7 +203,7 @@ export function StakeButton({ winner }: Props) {
       )}
 
       {/* Balance hint */}
-      {status === "idle" && usdcBalance > 0n && (
+      {status === "idle" && usdcBalance > BigInt(0) && (
         <p className="text-slate-600 text-xs text-center">
           Balance: {(Number(usdcBalance) / 1e6).toFixed(2)} mUSDC
         </p>
