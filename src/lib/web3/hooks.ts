@@ -45,7 +45,7 @@ export function useStake(): UseStakeResult {
   const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
   const [stakeTxHash, setStakeTxHash]     = useState<`0x${string}` | undefined>();
   const [pendingAgentId, setPendingAgentId] = useState<AgentIdValue>(0);
-  const [pendingAmount,  setPendingAmount]  = useState<bigint>(0n);
+  const [pendingAmount,  setPendingAmount]  = useState<bigint>(BigInt(0));
 
   const { writeContractAsync } = useWriteContract();
 

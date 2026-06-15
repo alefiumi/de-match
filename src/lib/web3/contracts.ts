@@ -4,12 +4,38 @@
  * paste the printed addresses here.
  */
 
+import { baseSepolia } from "wagmi/chains";
+
+// ── Network ──────────────────────────────────────────────────────────────────
+export const CHAIN_ID = baseSepolia.id; // 84532
+
+// ── Addresses ────────────────────────────────────────────────────────────────
+export const MOCK_USDC_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+export const STAKING_ADDRESS   = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+
+/** @deprecated Use named exports above */
 export const CONTRACT_ADDRESSES = {
-  MOCK_USDC: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-  STAKING:   "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  MOCK_USDC: MOCK_USDC_ADDRESS,
+  STAKING:   STAKING_ADDRESS,
 } as const;
 
-// ── MockUSDC ABI (only the functions we call) ────────────────────────────────
+// ── Agent IDs (matches Solidity enum order) ───────────────────────────────────
+export const AGENT_IDS: Record<string, number> = {
+  Claude:  0,
+  ChatGPT: 1,
+  Copilot: 2,
+  Gemini:  3,
+};
+
+export type AgentIdValue = 0 | 1 | 2 | 3;
+
+/** @deprecated Use AGENT_IDS */
+export const AGENT_ID = AGENT_IDS;
+
+// ── Stake amount: 10 mUSDC (6 decimals) ─────────────────────────────────────
+export const STAKE_AMOUNT = BigInt(10 * 10 ** 6);
+
+// ── MockUSDC ABI ─────────────────────────────────────────────────────────────
 export const MOCK_USDC_ABI = [
   {
     name: "balanceOf",
@@ -55,7 +81,7 @@ export const MOCK_USDC_ABI = [
   },
 ] as const;
 
-// ── DeMatchStaking ABI (only the functions we call) ──────────────────────────
+// ── DeMatchStaking ABI ───────────────────────────────────────────────────────
 export const STAKING_ABI = [
   {
     name: "MIN_STAKE",
@@ -99,14 +125,3 @@ export const STAKING_ABI = [
     outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
-
-// ── Agent ID enum (matches the Solidity enum order) ──────────────────────────
-export const AGENT_ID: Record<string, number> = {
-  Claude:  0,
-  ChatGPT: 1,
-  Copilot: 2,
-  Gemini:  3,
-};
-
-// ── Stake amount: 10 mUSDC (6 decimals) ─────────────────────────────────────
-export const STAKE_AMOUNT = BigInt(10 * 10 ** 6);
