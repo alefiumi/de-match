@@ -1,8 +1,8 @@
 # De-Match Protocol
 
-**Decentralized AI Trust Registry** — Find your perfect AI agent match.
+**Decentralized AI Trust Registry** — Find your perfect AI agent match, then stake mUSDC on-chain to unlock it.
 
-Built with Next.js 15 (App Router) · TypeScript · Tailwind CSS · Google Gemini API · Vercel
+Built with **Next.js 15** · **TypeScript** · **Tailwind CSS** · **RainbowKit** · **wagmi v2** · **viem** · **Hardhat** · **Base Sepolia** · **Vercel**
 
 ---
 
@@ -10,200 +10,175 @@ Built with Next.js 15 (App Router) · TypeScript · Tailwind CSS · Google Gemin
 
 ```
 de-match/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── match/route.ts      ← POST /api/match  (secure, server-side)
-│   │   │   └── health/route.ts     ← GET  /api/health
-│   │   ├── layout.tsx              ← Root layout, fonts, metadata
-│   │   ├── page.tsx                ← Home page (client component)
-│   │   └── globals.css
-│   ├── components/
-│   │   ├── Header.tsx
-│   │   ├── Footer.tsx
-│   │   ├── WorkflowInput.tsx
-│   │   ├── LoadingState.tsx
-│   │   ├── ErrorState.tsx
-│   │   └── ResultsDashboard.tsx
-│   ├── lib/
-│   │   ├── gemini.ts               ← Server-only Gemini client
-│   │   ├── rate-limit.ts           ← In-memory rate limiter
-│   │   ├── constants.ts            ← Agent metadata, prompts
-│   │   ├── validation.ts           ← Zod schemas
-│   │   └── utils.ts                ← cn(), hex helpers, mock data
-│   └── types/
-│       └── index.ts                ← Shared TypeScript types
-├── vercel.json                     ← Security headers + redirects
-├── .env.example                    ← Environment variable template
-└── tailwind.config.ts
+├── contracts/                        ← Hardhat project (deploy separately)
+│   ├── contracts/
+│   │   ├── MockUSDC.sol              ← ERC-20 faucet token (6 decimals)
+│   │   └── DeMatchStaking.sol        ← approve → stake → unlock flow
+│   ├── scripts/deploy.ts             ← Deploy both contracts to Base Sepolia
+│   └── hardhat.config.ts
+│
+└── src/                              ← Next.js App Router
+    ├── app/
+    │   ├── api/match/route.ts        ← POST /api/match (Gemini, server-side)
+    │   ├── layout.tsx                ← Web3Provider wraps everything
+    │   └── page.tsx
+    ├── components/
+    │   ├── Web3Provider.tsx          ← wagmi + RainbowKit + React Query
+    │   ├── Header.tsx                ← RainbowKit ConnectButton
+    │   ├── StakeButton.tsx           ← Full approve→stake UI with all states
+    │   └── ResultsDashboard.tsx
+    ├── hooks/
+    │   └── useStake.ts               ← approve → stake orchestration hook
+    └── lib/web3/
+        ├── wagmi.ts                  ← wagmi config (Base Sepolia only)
+        └── contracts.ts              ← Addresses + ABIs + AGENT_ID enum
 ```
 
 ---
 
-## Security Model
-
-| Concern | Solution |
-|---|---|
-| **API key exposure** | `GEMINI_API_KEY` is server-only (no `NEXT_PUBLIC_` prefix). Never sent to the browser. |
-| **Input injection** | Zod validation on every request. Min/max length enforced. |
-| **Rate limiting** | In-memory limiter (10 req / 60 s per IP). Swap for Upstash Redis for multi-instance. |
-| **Security headers** | `vercel.json` sets CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy. |
-| **Error leakage** | Internal errors are logged server-side; clients receive safe generic messages. |
-| **Method restriction** | `/api/match` rejects all methods except `POST`. |
-
----
-
-## Local Development
+## Quick Start
 
 ### Prerequisites
 
 - Node.js ≥ 18
 - A [Gemini API key](https://aistudio.google.com/app/apikey)
+- A [WalletConnect Project ID](https://cloud.walletconnect.com) (free)
+- MetaMask (or any EVM wallet) with Base Sepolia configured
 
-### Setup
+### 1. Install & configure
 
 ```bash
-# 1. Clone / copy the project
-cd de-match
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure environment variables
 cp .env.example .env.local
-# → Edit .env.local and set GEMINI_API_KEY=your_key_here
-
-# 4. Start the dev server
+# Fill in GEMINI_API_KEY and NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+### 2. Deploy contracts (Base Sepolia)
 
-### Environment Variables
+```bash
+cd contracts
+cp .env.example .env
+# Fill in DEPLOYER_PRIVATE_KEY (needs Base Sepolia ETH)
+# Get free ETH: https://faucet.quicknode.com/base/sepolia
+npm install
+npm run deploy:sepolia
+```
 
-| Variable | Required | Default | Description |
+The script prints the deployed addresses. Copy them into `src/lib/web3/contracts.ts`:
+
+```ts
+export const CONTRACT_ADDRESSES = {
+  MOCK_USDC: "0xYOUR_MOCK_USDC_ADDRESS",
+  STAKING:   "0xYOUR_STAKING_ADDRESS",
+};
+```
+
+Then redeploy to Vercel (or restart the dev server).
+
+---
+
+## On-Chain Flow
+
+The stake panel in the UI walks users through two transactions:
+
+```
+User
+ │
+ ├─ 1. MockUSDC.approve(stakingContract, 10_000_000)
+ │      → MetaMask / WalletConnect prompt
+ │      → Wait for confirmation on Base Sepolia
+ │
+ └─ 2. DeMatchStaking.stake(agentId, 10_000_000)
+        → Pulls mUSDC via transferFrom
+        → Records stake with 7-day lock
+        → Emits Staked + AgentUnlocked events
+        → UI shows "Agent Unlocked!" + Basescan link
+```
+
+If the user has no mUSDC, a **"Claim from Faucet"** button calls `MockUSDC.faucet()` to drip 100 mUSDC (1 hr cooldown).
+
+---
+
+## Environment Variables
+
+### Next.js app (`/.env.local`)
+
+| Variable | Side | Required | Description |
 |---|---|---|---|
-| `GEMINI_API_KEY` | ✅ | — | Your Google Gemini API key |
-| `RATE_LIMIT_WINDOW_S` | ❌ | `60` | Rate-limit window in seconds |
-| `RATE_LIMIT_MAX` | ❌ | `10` | Max requests per window per IP |
+| `GEMINI_API_KEY` | Server | ✅ | Gemini API key — never sent to browser |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Client | ✅ | WalletConnect Project ID |
+| `RATE_LIMIT_WINDOW_S` | Server | ❌ | Rate-limit window in seconds (default: 60) |
+| `RATE_LIMIT_MAX` | Server | ❌ | Max requests per window per IP (default: 10) |
+
+### Contracts (`/contracts/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `DEPLOYER_PRIVATE_KEY` | ✅ | Private key for deployment wallet |
+| `BASE_SEPOLIA_RPC` | ❌ | Custom RPC (default: `https://sepolia.base.org`) |
+| `BASESCAN_API_KEY` | ❌ | For contract verification on Basescan |
 
 ---
 
 ## Deploying to Vercel
 
-### 1. Push to GitHub / GitLab
-
-```bash
-git init
-git add .
-git commit -m "feat: initial De-Match Protocol"
-git remote add origin https://github.com/YOUR_ORG/de-match.git
-git push -u origin main
-```
-
-### 2. Import on Vercel
-
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import your repository
-3. Framework preset: **Next.js** (auto-detected)
-
-### 3. Set Environment Variables
-
-In Vercel Dashboard → Settings → Environment Variables:
-
-| Key | Value | Environments |
-|---|---|---|
-| `GEMINI_API_KEY` | `your_key_here` | Production, Preview, Development |
-
-> ⚠️ Never set `NEXT_PUBLIC_GEMINI_API_KEY` — that would expose it to the browser.
-
-### 4. Deploy
-
-Click **Deploy**. Vercel will:
-- Build the Next.js app
-- Apply security headers from `vercel.json`
-- Serve the API route as a serverless function
-
-### Verify deployment
-
-```bash
-# Health check
-curl https://your-app.vercel.app/api/health
-
-# Should return:
-# {"status":"ok","timestamp":"...","geminiConfigured":true}
-```
+1. Push to GitHub
+2. Import on [vercel.com/new](https://vercel.com/new)
+3. Add environment variables in **Settings → Environment Variables**:
+   - `GEMINI_API_KEY`
+   - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+4. Deploy — security headers applied automatically from `vercel.json`
 
 ---
 
-## API Reference
+## Security
 
-### `POST /api/match`
-
-Evaluates a workflow description and returns the recommended AI agent.
-
-**Request**
-```json
-{ "workflow": "I need to review confidential legal contracts and integrate with Word…" }
-```
-
-**Success response (200)**
-```json
-{
-  "result": {
-    "winner": "Claude",
-    "matchPercentage": "94%",
-    "reasoning": "Claude excels at nuanced reasoning over long confidential documents. Its safety features and deep reasoning capability make it ideal for legal workflows.",
-    "mockTrustScore": "4.8/5 · 137 On-Chain Attestations"
-  }
-}
-```
-
-**Error responses**
-
-| Status | `code` | Meaning |
-|---|---|---|
-| 400 | `VALIDATION_ERROR` | Workflow too short, too long, or missing |
-| 429 | `RATE_LIMITED` | Too many requests from this IP |
-| 500 | `MISCONFIGURED` | `GEMINI_API_KEY` not set on server |
-| 502 | `ORACLE_ERROR` | Gemini API unavailable or returned bad data |
+| Concern | Solution |
+|---|---|
+| API key exposure | `GEMINI_API_KEY` is server-only. Never sent to the browser. |
+| Input injection | Zod validation on every `/api/match` request. |
+| Rate limiting | In-memory per-IP limiter. Swap for Upstash Redis for multi-region. |
+| Security headers | CSP, HSTS, X-Frame-Options, Referrer-Policy via `vercel.json`. |
+| Contract safety | `ReentrancyGuard`, `SafeERC20`, `Ownable`. Minimum stake enforced. |
+| Wrong network | UI detects chain ID and blocks staking if not on Base Sepolia. |
 
 ---
 
-## Upgrading the Rate Limiter
+## Contract Reference
 
-The default in-memory limiter works for a single serverless instance. For production multi-region deployments, replace `src/lib/rate-limit.ts` with [Upstash Redis](https://upstash.com/):
+### MockUSDC
 
-```bash
-npm install @upstash/ratelimit @upstash/redis
-```
+| Function | Description |
+|---|---|
+| `faucet()` | Drips 100 mUSDC to caller (1 hr cooldown) |
+| `approve(spender, amount)` | Standard ERC-20 approve |
+| `balanceOf(address)` | Standard ERC-20 balance |
 
-```ts
-// src/lib/rate-limit.ts (Upstash version)
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+### DeMatchStaking
 
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, "60 s"),
-});
+| Function | Description |
+|---|---|
+| `stake(agentId, amount)` | Pull mUSDC from caller, record stake, unlock agent |
+| `withdraw(stakeIndex)` | Return mUSDC after 7-day lock period |
+| `hasActiveStake(staker, agentId)` | Check if address has active stake for agent |
+| `stakeCount(staker)` | Number of stakes for address |
 
-export async function isRateLimited(ip: string): Promise<boolean> {
-  const { success } = await ratelimit.limit(ip);
-  return !success;
-}
-```
-
-Add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` to your Vercel environment variables.
+Agent IDs: `0 = Claude`, `1 = ChatGPT`, `2 = Copilot`, `3 = Gemini`
 
 ---
 
 ## Scripts
 
 ```bash
-npm run dev          # Start development server
+# Next.js
+npm run dev          # Start dev server
 npm run build        # Production build
-npm run start        # Start production server locally
-npm run lint         # ESLint
-npm run type-check   # TypeScript type check (no emit)
+npm run type-check   # TypeScript check
+
+# Contracts (from /contracts)
+npm run compile      # Compile Solidity
+npm run test         # Run Hardhat tests
+npm run deploy:sepolia  # Deploy to Base Sepolia
+npm run node         # Local Hardhat node
 ```

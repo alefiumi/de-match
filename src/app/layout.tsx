@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Web3Provider } from "@/components/Web3Provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,17 +30,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="bg-[#0a0d14] text-slate-200 font-sans min-h-screen overflow-x-hidden antialiased">
-        <Header />
-        {children}
-        <Footer />
+        <Web3Provider>
+          <Header />
+          {children}
+          <Footer />
+        </Web3Provider>
       </body>
     </html>
   );

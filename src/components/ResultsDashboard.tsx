@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AGENTS } from "@/lib/constants";
 import { hexToRgb, mockBlockNum, mockGasPrice, mockTxHash } from "@/lib/utils";
+import { StakeButton } from "@/components/StakeButton";
 import type { MatchResult } from "@/types";
 
 interface Props {
@@ -20,7 +21,6 @@ export function ResultsDashboard({ result }: Props) {
   useEffect(() => {
     if (!result) return;
     const pct = parseFloat(result.matchPercentage) || 85;
-    // Delay lets CSS transition fire
     const id = setTimeout(() => setBarWidth(pct), 80);
     return () => clearTimeout(id);
   }, [result]);
@@ -29,12 +29,6 @@ export function ResultsDashboard({ result }: Props) {
 
   const meta = AGENTS[result.winner] ?? AGENTS.Claude;
   const rgb = hexToRgb(meta.color);
-
-  function stakeAction() {
-    alert(
-      "🔗 Simulating Web3 Transaction…\n\nApprove USDC spend → Sign message → Broadcasting…\n\n✓ Mock tx confirmed. Agent access unlocked!"
-    );
-  }
 
   return (
     <div className="animate-fade-up">
@@ -50,17 +44,14 @@ export function ResultsDashboard({ result }: Props) {
           </div>
           <div
             className="agent-ring shrink-0"
-            style={{
-              borderColor: meta.color,
-              background: `rgba(${rgb},0.1)`,
-            }}
+            style={{ borderColor: meta.color, background: `rgba(${rgb},0.1)` }}
             aria-label={`${result.winner} icon`}
           >
             <span role="img" aria-hidden="true" style={{ fontSize: 28 }}>{meta.emoji}</span>
           </div>
         </div>
 
-        {/* Match percentage bar */}
+        {/* Match bar */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-slate-400 text-xs">Compatibility Score</span>
@@ -103,38 +94,23 @@ export function ResultsDashboard({ result }: Props) {
                 className={`rounded-xl p-3 text-center ${isWinner ? "" : "opacity-40"}`}
                 style={
                   isWinner
-                    ? {
-                        background: `rgba(${agentRgb},0.12)`,
-                        border: `1px solid rgba(${agentRgb},0.35)`,
-                      }
-                    : {
-                        background: "rgba(148,163,184,0.04)",
-                        border: "1px solid rgba(148,163,184,0.1)",
-                      }
+                    ? { background: `rgba(${agentRgb},0.12)`, border: `1px solid rgba(${agentRgb},0.35)` }
+                    : { background: "rgba(148,163,184,0.04)", border: "1px solid rgba(148,163,184,0.1)" }
                 }
                 aria-current={isWinner ? "true" : undefined}
               >
                 <div style={{ fontSize: 22, marginBottom: 4 }}>{agentMeta.emoji}</div>
-                <p
-                  className="font-display text-xs font-semibold"
-                  style={{ color: isWinner ? agentMeta.color : "#64748b" }}
-                >
+                <p className="font-display text-xs font-semibold" style={{ color: isWinner ? agentMeta.color : "#64748b" }}>
                   {name}
                 </p>
-                {isWinner && (
-                  <p style={{ fontSize: 10, color: agentMeta.color, marginTop: 2 }}>
-                    ✓ Best Match
-                  </p>
-                )}
+                {isWinner && <p style={{ fontSize: 10, color: agentMeta.color, marginTop: 2 }}>✓ Best Match</p>}
               </div>
             );
           })}
         </div>
 
-        {/* Stake CTA */}
-        <button className="btn-stake w-full py-3.5 text-sm tracking-wide" onClick={stakeAction}>
-          🔗 Stake USDC to Unlock Agent
-        </button>
+        {/* ── Real stake CTA ── */}
+        <StakeButton winner={result.winner} />
       </div>
 
       {/* Meta info bar */}
@@ -145,15 +121,9 @@ export function ResultsDashboard({ result }: Props) {
             <span className="text-slate-400 text-xs">Attestation broadcasted to 12 peer nodes</span>
           </div>
           <div className="flex gap-3">
-            <span className="text-slate-500 text-xs">
-              Block: <span className="text-slate-300">#21,{chainData.block}</span>
-            </span>
-            <span className="text-slate-500 text-xs">
-              Gas: <span className="text-slate-300">{chainData.gas} gwei</span>
-            </span>
-            <span className="text-slate-500 text-xs">
-              Tx: <span className="text-cyan-500 text-xs">{chainData.tx}</span>
-            </span>
+            <span className="text-slate-500 text-xs">Block: <span className="text-slate-300">#21,{chainData.block}</span></span>
+            <span className="text-slate-500 text-xs">Gas: <span className="text-slate-300">{chainData.gas} gwei</span></span>
+            <span className="text-slate-500 text-xs">Tx: <span className="text-cyan-500 text-xs">{chainData.tx}</span></span>
           </div>
         </div>
       </div>
